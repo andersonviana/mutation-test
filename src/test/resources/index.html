@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>PIT — Sugestões de Cobertura de Mutantes Sobreviventes</title>
+<style>
+    :root {
+        --green: #2e7d32;
+        --green-bg: #e8f5e9;
+        --red: #c62828;
+        --red-bg: #fdecea;
+        --amber: #b26a00;
+        --amber-bg: #fff4e0;
+        --blue: #1565c0;
+        --blue-bg: #e8f0fe;
+        --border: #d0d7de;
+    }
+    * { box-sizing: border-box; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        margin: 0;
+        padding: 0 0 60px 0;
+        color: #1f2328;
+        background: #f6f8fa;
+    }
+    header {
+        background: linear-gradient(135deg, #1b2a41, #24405e);
+        color: #fff;
+        padding: 32px 40px;
+    }
+    header h1 { margin: 0 0 6px 0; font-size: 26px; }
+    header p { margin: 0; opacity: 0.85; font-size: 14px; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 40px; }
+    .banner {
+        margin-top: -20px;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+        padding: 20px 24px;
+        display: flex;
+        gap: 28px;
+        flex-wrap: wrap;
+    }
+    .stat { min-width: 130px; }
+    .stat .value { font-size: 28px; font-weight: 700; }
+    .stat .label { font-size: 12px; color: #57606a; text-transform: uppercase; letter-spacing: .03em; }
+    .stat.total .value { color: #24405e; }
+    .stat.killed .value { color: var(--green); }
+    .stat.survived .value { color: var(--red); }
+    .stat.score .value { color: var(--blue); }
+
+    section { margin-top: 36px; }
+    h2 {
+        font-size: 20px;
+        border-bottom: 2px solid var(--border);
+        padding-bottom: 8px;
+        margin-bottom: 18px;
+    }
+    h2 .badge {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 999px;
+        margin-left: 10px;
+        vertical-align: middle;
+    }
+    .badge.low { background: var(--red-bg); color: var(--red); }
+    .badge.mid { background: var(--amber-bg); color: var(--amber); }
+    .badge.high { background: var(--green-bg); color: var(--green); }
+
+    table.summary {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    table.summary th, table.summary td {
+        padding: 10px 14px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        font-size: 14px;
+    }
+    table.summary th { background: #eef1f4; font-size: 12px; text-transform: uppercase; color: #57606a; }
+    table.summary td.num { text-align: center; font-variant-numeric: tabular-nums; }
+
+    .gap {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-left: 5px solid var(--red);
+        border-radius: 8px;
+        padding: 18px 22px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .gap.design { border-left-color: var(--amber); }
+    .gap h3 { margin: 0 0 6px 0; font-size: 16px; }
+    .gap .meta { font-size: 12px; color: #57606a; margin-bottom: 10px; }
+    .gap .meta code { background: #f0f2f5; padding: 1px 6px; border-radius: 4px; }
+    .mutant-list { margin: 10px 0 14px 0; padding: 0; list-style: none; }
+    .mutant-list li {
+        font-size: 13px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: var(--red-bg);
+        color: var(--red);
+        margin-bottom: 6px;
+    }
+    .mutant-list li.design { background: var(--amber-bg); color: var(--amber); }
+    .why { font-size: 14px; margin: 10px 0; }
+    .why b { color: #1f2328; }
+    pre {
+        background: #0d1117;
+        color: #e6edf3;
+        padding: 14px 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 12.5px;
+        line-height: 1.5;
+    }
+    pre .comment { color: #8b949e; }
+    .suggestion-label {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        background: var(--blue-bg);
+        color: var(--blue);
+        padding: 3px 8px;
+        border-radius: 4px;
+        margin-bottom: 8px;
+    }
+    footer {
+        max-width: 1100px;
+        margin: 40px auto 0 auto;
+        padding: 0 40px;
+        font-size: 12px;
+        color: #57606a;
+    }
+    .note-box {
+        background: var(--blue-bg);
+        border: 1px solid #b6d4fe;
+        border-radius: 8px;
+        padding: 14px 18px;
+        font-size: 13.5px;
+        margin-bottom: 24px;
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <div class="container" style="padding:0;">
+        <h1>Sugestões de Cobertura — Mutantes Sobreviventes (PIT)</h1>
+        <p>Gerado a partir de <code>build/reports/pitest/mutations.xml</code> — mutadores <b>STRONGER</b> — projeto <b>mutation-test-poc</b>.</p>
+        <p>⚠️ Este documento é apenas um relatório de sugestões. Nenhum arquivo de produção ou de teste do projeto foi alterado.</p>
+    </div>
+</header>
+
+<div class="container">
+
+    <div class="banner">
+        <div class="stat total"><div class="value">75</div><div class="label">Mutantes gerados</div></div>
+        <div class="stat killed"><div class="value">59</div><div class="label">Mortos (Killed)</div></div>
+        <div class="stat survived"><div class="value">16</div><div class="label">Sobreviventes</div></div>
+        <div class="stat score"><div class="value">79%</div><div class="label">Mutation Score</div></div>
+    </div>
+
+    <section>
+        <h2>Resumo por classe</h2>
+        <table class="summary">
+            <thead>
+                <tr>
+                    <th>Classe</th>
+                    <th class="num">Mutantes</th>
+                    <th class="num">Mortos</th>
+                    <th class="num">Sobreviventes</th>
+                    <th class="num">Mutation Score</th>
+                    <th>Gaps identificados abaixo</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>scenario1.simple.<b>DiscountService</b></td>
+                    <td class="num">20</td>
+                    <td class="num">11</td>
+                    <td class="num">9</td>
+                    <td class="num"><b style="color:var(--red)">55%</b></td>
+                    <td>#1, #2, #3</td>
+                </tr>
+                <tr>
+                    <td>scenario2.intermediate.<b>CreditEligibilityService</b></td>
+                    <td class="num">25</td>
+                    <td class="num">19</td>
+                    <td class="num">6</td>
+                    <td class="num"><b style="color:var(--amber)">76%</b></td>
+                    <td>#4, #5, #6, #7</td>
+                </tr>
+                <tr>
+                    <td>scenario3.complex.<b>PricingService</b></td>
+                    <td class="num">30</td>
+                    <td class="num">29</td>
+                    <td class="num">1</td>
+                    <td class="num"><b style="color:var(--green)">97%</b></td>
+                    <td>#8 (achado de design, não só teste)</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2>Cenário 1 — DiscountService <span class="badge low">55% mutation score</span></h2>
+
+        <div class="gap">
+            <h3>Gap #1 — Ramo "cliente comum" sem asserção de valor exato</h3>
+            <div class="meta">Classe: <code>DiscountService</code> · Método: <code>calculateDiscountRate</code> · Linhas: <code>65</code>, <code>75</code>, <code>76</code></div>
+            <ul class="mutant-list">
+                <li>L65 — RemoveConditionalMutator_EQUAL_IF (condição <code>if (vipCustomer)</code> forçada para sempre <code>true</code>)</li>
+                <li>L75 — ConditionalsBoundaryMutator (<code>&gt;=</code> → <code>&gt;</code> em <code>purchaseAmount &gt;= VIP_THRESHOLD</code>)</li>
+                <li>L75 — RemoveConditionalMutator_ORDER_IF / ORDER_ELSE (condição forçada para <code>true</code>/<code>false</code>)</li>
+                <li>L76 — PrimitiveReturnsMutator (<code>return REGULAR_HIGH_DISCOUNT;</code> trocado por <code>return 0.0d;</code>)</li>
+            </ul>
+            <p class="why"><b>Por que sobrevive:</b> os testes atuais para cliente comum (<code>regularCustomerWithHighPurchaseHasSomeDiscount</code> e <code>regularCustomerWithLowPurchaseDoesNotThrow</code>) usam <code>assertTrue(result &lt;= 1000.0)</code> e <code>assertDoesNotThrow(...)</code>. Nenhuma asserção verifica o <b>valor exato</b> do desconto (5% ou 0%), então qualquer mutação nesse ramo continua "passando" nos testes.</p>
+            <span class="suggestion-label">Sugestão de teste (não aplicado)</span>
+<pre>@Test
+@DisplayName("Cliente comum com compra >= 500 recebe exatamente 5% de desconto")
+void regularCustomerAtOrAboveThresholdGetsExactlyFivePercent() {
+    <span class="comment">// mata: L65 EQUAL_IF, L75 boundary/ORDER_IF/ORDER_ELSE, L76 primitive-return</span>
+    assertEquals(0.05, service.calculateDiscountRate(false, 500.0), 0.0001);
+    assertEquals(950.0, service.calculateFinalPrice(false, 1000.0), 0.0001);
+}
+
+@Test
+@DisplayName("Cliente comum abaixo do limite (499.99) não recebe desconto")
+void regularCustomerBelowThresholdGetsNoDiscount() {
+    assertEquals(0.0, service.calculateDiscountRate(false, 499.99), 0.0001);
+    assertEquals(499.99, service.calculateFinalPrice(false, 499.99), 0.0001);
+}</pre>
+        </div>
+
+        <div class="gap">
+            <h3>Gap #2 — Boundary de valor negativo/zero não testado com precisão</h3>
+            <div class="meta">Classe: <code>DiscountService</code> · Métodos: <code>calculateFinalPrice</code>, <code>calculateDiscountRate</code> · Linhas: <code>45</code>, <code>61</code></div>
+            <ul class="mutant-list">
+                <li>L45 — ConditionalsBoundaryMutator (<code>&lt;</code> → <code>&lt;=</code> em <code>purchaseAmount &lt; 0</code>, dentro de <code>calculateFinalPrice</code>)</li>
+                <li>L45 — RemoveConditionalMutator_ORDER_ELSE (condição forçada para <code>false</code>)</li>
+                <li>L61 — mesmos dois mutantes, dentro de <code>calculateDiscountRate</code></li>
+            </ul>
+            <p class="why"><b>Por que sobrevive:</b> o único teste de validação usa <code>purchaseAmount = -1.0</code>. Nenhum teste chama o método com <code>purchaseAmount = 0.0</code> exatamente — o valor limite da regra "negativo lança exceção". Se o operador virar <code>&lt;=</code>, <code>0.0</code> passaria a lançar exceção indevidamente, e nenhum teste perceberia.</p>
+            <span class="suggestion-label">Sugestão de teste (não aplicado)</span>
+<pre>@Test
+@DisplayName("Valor exatamente zero não deve lançar exceção (mata boundary mutant < -> <=)")
+void zeroAmountIsValidAndDoesNotThrow() {
+    assertDoesNotThrow(() -> service.calculateFinalPrice(false, 0.0));
+    assertEquals(0.0, service.calculateDiscountRate(true, 0.0), 0.0001);
+}</pre>
+        </div>
+
+        <div class="gap">
+            <h3>Gap #3 — Recomendação geral para o cenário</h3>
+            <p class="why">Troque as asserções fracas (<code>assertTrue</code>, <code>assertDoesNotThrow</code>) da classe aninhada <code>RegularCustomerRules</code> por <code>assertEquals</code> com valor exato, seguindo o mesmo padrão já usado em <code>VipCustomerRules</code>. Isso deve elevar o mutation score deste cenário de <b>55% para próximo de 100%</b>, já que os 9 mutantes sobreviventes estão concentrados nesses 2 gaps.</p>
+        </div>
+    </section>
+
+    <section>
+        <h2>Cenário 2 — CreditEligibilityService <span class="badge mid">76% mutation score</span></h2>
+
+        <div class="gap">
+            <h3>Gap #4 — Nenhum teste no valor exato dos boundaries (700, 3000, 500)</h3>
+            <div class="meta">Classe: <code>CreditEligibilityService</code> · Método: <code>evaluate</code> · Linhas: <code>40</code>, <code>45</code>, <code>47</code>, <code>55</code></div>
+            <ul class="mutant-list">
+                <li>L40 — ConditionalsBoundaryMutator (<code>score &lt; SCORE_APPROVAL_THRESHOLD</code> → <code>&lt;=</code>, dentro da regra de dívida ativa)</li>
+                <li>L45 — ConditionalsBoundaryMutator (<code>score &gt;= 700</code> → <code>&gt;</code>)</li>
+                <li>L47 — ConditionalsBoundaryMutator (<code>monthlyIncome &gt;= 3000</code> → <code>&gt;</code>)</li>
+                <li>L55 — ConditionalsBoundaryMutator (<code>score &gt;= 500</code> → <code>&gt;</code>)</li>
+            </ul>
+            <p class="why"><b>Por que sobrevive:</b> todos os testes existentes usam valores "confortavelmente" dentro ou fora da faixa (300, 600, 650, 750, 5000, 1000, 2000, 10000) — nenhum usa o valor <b>exatamente no limite</b> (700, 3000 ou 500). Testes de boundary condition só matam esse tipo de mutante quando o valor de entrada é igual à constante comparada.</p>
+            <span class="suggestion-label">Sugestão de teste (não aplicado)</span>
+<pre>@Test
+@DisplayName("Score exatamente 700 com renda >= 3000 é APROVADO (mata boundary L45)")
+void scoreExactlyAtApprovalThresholdIsApproved() {
+    assertEquals(CreditDecision.APROVADO, service.evaluate(700, 3000.0, false));
+}
+
+@Test
+@DisplayName("Renda exatamente 3000 conta como aprovação plena, não condicional (mata boundary L47)")
+void incomeExactlyAtThresholdIsFullApproval() {
+    assertEquals(CreditDecision.APROVADO, service.evaluate(750, 3000.0, false));
+}
+
+@Test
+@DisplayName("Score exatamente 500 sem dívida vai para análise manual (mata boundary L55)")
+void scoreExactlyAtManualReviewThresholdGoesToManualReview() {
+    assertEquals(CreditDecision.ANALISE_MANUAL, service.evaluate(500, 1000.0, false));
+}
+
+@Test
+@DisplayName("Dívida ativa com score exatamente 700 NÃO deve reprovar (mata boundary L40)")
+void activeDebtAtExactApprovalThresholdIsNotRejected() {
+    assertEquals(CreditDecision.APROVADO_CONDICIONAL, service.evaluate(700, 1000.0, true));
+}</pre>
+        </div>
+
+        <div class="gap">
+            <h3>Gap #5 — Asserção fraca aceita qualquer decisão "de aprovação"</h3>
+            <div class="meta">Classe: <code>CreditEligibilityService</code> · Método: <code>evaluate</code> · Linha: <code>47</code></div>
+            <ul class="mutant-list">
+                <li>L47 — RemoveConditionalMutator_ORDER_ELSE / ORDER_IF (condição <code>monthlyIncome &gt;= 3000</code> forçada para <code>false</code>/<code>true</code>)</li>
+            </ul>
+            <p class="why"><b>Por que sobrevive:</b> o teste <code>highScoreLowIncomeReturnsSomeApprovalDecision</code> (classe aninhada <code>HighScoreWeakAssertions</code>) usa <code>assertTrue(decision == APROVADO || decision == APROVADO_CONDICIONAL)</code>. Como ambos os valores estão no conjunto aceito, mutar a condição para sempre <code>true</code> ou sempre <code>false</code> não muda o resultado do teste.</p>
+            <span class="suggestion-label">Sugestão de ajuste (não aplicado)</span>
+<pre>@Test
+@DisplayName("Score >= 700 e renda < 3000 deve ser EXATAMENTE APROVADO_CONDICIONAL")
+void highScoreLowIncomeReturnsExactlyConditionalApproval() {
+    <span class="comment">// substitui a asserção fraca por um valor exato</span>
+    assertEquals(CreditDecision.APROVADO_CONDICIONAL, service.evaluate(750, 1000.0, false));
+}</pre>
+        </div>
+
+        <div class="gap">
+            <h3>Gap #6 — Teste de "não reprovado" não verifica a decisão real</h3>
+            <div class="meta">Classe: <code>CreditEligibilityService</code> · Teste correspondente: <code>activeDebtWithHighScoreIsNotAutomaticallyRejected</code></div>
+            <p class="why">Mesmo raciocínio do Gap #5: <code>assertNotEquals(REPROVADO, decision)</code> não distingue entre <code>APROVADO</code> e <code>APROVADO_CONDICIONAL</code>. Combinado com o Gap #4 (usar score exatamente 700), dá para fortalecer bastante este teste.</p>
+            <span class="suggestion-label">Sugestão de ajuste (não aplicado)</span>
+<pre>@Test
+@DisplayName("Dívida ativa com score >= 700 e renda alta é EXATAMENTE APROVADO")
+void activeDebtWithHighScoreAndHighIncomeIsFullyApproved() {
+    assertEquals(CreditDecision.APROVADO, service.evaluate(750, 10000.0, true));
+}</pre>
+        </div>
+
+        <div class="gap">
+            <h3>Gap #7 — Recomendação geral para o cenário</h3>
+            <p class="why">Priorize os 4 testes de boundary do Gap #4 — eles sozinhos devem matar 5 dos 6 mutantes sobreviventes. Depois, troque as asserções fracas dos Gaps #5/#6 por <code>assertEquals</code> com o valor exato. Ganho estimado: mutation score de <b>76% para ~100%</b>.</p>
+        </div>
+    </section>
+
+    <section>
+        <h2>Cenário 3 — PricingService <span class="badge high">97% mutation score</span></h2>
+
+        <div class="gap design">
+            <h3>Gap #8 — Piso mínimo de preço (<code>MIN_PRICE_FACTOR</code>) parece inalcançável com as regras atuais <span style="font-weight:400;">(achado de design, não apenas de teste)</span></h3>
+            <div class="meta">Classe: <code>PricingService</code> · Método: <code>calculatePrice</code> · Linha: <code>83</code></div>
+            <ul class="mutant-list design">
+                <li>L83 — MathMutator (multiplicação trocada por divisão em <code>product.basePrice() * MIN_PRICE_FACTOR * quantity</code>)</li>
+            </ul>
+            <div class="note-box">
+                Este mutante é diferente dos demais: não é apenas "faltou um teste". A análise da fórmula sugere que, com as regras de negócio atuais, o piso mínimo <b>nunca é de fato selecionado</b> por <code>Math.max</code>.
+            </div>
+            <p class="why"><b>Por que sobrevive (análise matemática):</b></p>
+            <ul>
+                <li>Desconto máximo por quantidade é <b>15%</b> (fator final 0.85).</li>
+                <li>Piso mínimo exige fator ≥ <b>0.8</b> do <code>basePrice</code>.</li>
+                <li><b>STANDARD</b>: fator final mínimo = 0.85 → sempre acima do piso (0.8).</li>
+                <li><b>PREMIUM</b> (1.5x): fator final mínimo = 1.5 × 0.85 = 1.275 → muito acima do piso.</li>
+                <li><b>SEASONAL</b> normal (1.2x) e baixo estoque (2.0x): fatores ainda maiores → nunca atingem o piso.</li>
+            </ul>
+            <p class="why">Ou seja: <b>não existe combinação válida de categoria + quantidade</b>, dadas as regras descritas, em que <code>minimumTotal &gt; totalWithDiscount</code>. Qualquer teste que tentarmos escrever para "forçar" o piso a ser escolhido vai falhar — porque o próprio código de produção nunca cai nesse caminho. Esse tipo de mutante costuma ser chamado de <b>"mutante equivalente"</b> (equivalent mutant): sobrevive porque a mutação não tem efeito observável no comportamento real do sistema.</p>
+            <span class="suggestion-label">Sugestões (nenhuma aplicada ao projeto)</span>
+            <ol style="font-size:14px; line-height:1.6;">
+                <li><b>Confirmar com o time de negócio</b> se o piso de 80% deveria ser alcançável com as faixas de desconto atuais (ex.: se um desconto futuro de 25%+ for planejado, o piso já está pronto — apenas não é exercitado hoje).</li>
+                <li><b>Se o piso é intencionalmente "defensivo"</b> (proteção para regras futuras), documentar isso no Javadoc do método e marcar o mutante como aceito no relatório (não vale a pena perseguir 100% de mutation score às custas de testes artificiais).</li>
+                <li><b>Se possível reduzir o escopo do teste</b>, um teste unitário isolado da fórmula (chamando <code>calculatePrice</code> com um <code>basePrice</code> hipotético e validando a invariante <code>result &gt;= basePrice * 0.8 * quantity</code> para várias combinações via <code>@ParameterizedTest</code>) pelo menos documenta a invariante esperada, mesmo que não seja capaz de matar este mutante específico:</li>
+            </ol>
+<pre>@ParameterizedTest
+@DisplayName("Invariante: preço final nunca é menor que o piso, para qualquer tier de desconto")
+@ValueSource(ints = {1, 4, 5, 9, 10, 19, 20, 50})
+void priceNeverViolatesMinimumFloorInvariant(int quantity) {
+    Product product = productWith(PricingRule.STANDARD, 100.0);
+    when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+
+    double result = pricingService.calculatePrice(PRODUCT_ID, quantity);
+    double floor = 100.0 * 0.8 * quantity;
+
+    assertTrue(result >= floor,
+        <span class="comment">// documenta a invariante, mas não mata o MathMutator na L83</span>
+        () -> "Preço " + result + " abaixo do piso " + floor);
+}</pre>
+            <p class="why">Este é o único caso da POC em que a recomendação não é "escrever mais um teste", e sim <b>revisitar a regra de negócio</b> — um ótimo exemplo para a apresentação de como mutation testing revela não só gaps de teste, mas também código potencialmente morto/redundante.</p>
+        </div>
+    </section>
+
+    <section>
+        <h2>Resumo executivo das ações sugeridas</h2>
+        <table class="summary">
+            <thead>
+                <tr><th>#</th><th>Cenário</th><th>Ação sugerida</th><th>Mutantes que seriam mortos</th><th>Esforço</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>1</td><td>Simples</td><td>Asserções exatas para cliente comum (boundary 500)</td><td class="num">5</td><td>Baixo</td></tr>
+                <tr><td>2</td><td>Simples</td><td>Teste de boundary com valor 0.0</td><td class="num">4</td><td>Baixo</td></tr>
+                <tr><td>3</td><td>Intermediário</td><td>4 testes de boundary exato (700 / 3000 / 500)</td><td class="num">4</td><td>Baixo</td></tr>
+                <tr><td>4</td><td>Intermediário</td><td>Trocar 2 asserções fracas por valor exato</td><td class="num">2</td><td>Baixo</td></tr>
+                <tr><td>5</td><td>Complexo</td><td>Revisar regra de negócio do piso mínimo (não é gap de teste)</td><td class="num">0*</td><td>Médio (decisão de negócio)</td></tr>
+            </tbody>
+        </table>
+        <p style="font-size:12px;color:#57606a;">* Mutante potencialmente equivalente — só será morto se a regra de negócio mudar para permitir descontos acima de 20%.</p>
+    </section>
+
+</div>
+
+<footer>
+    Relatório gerado manualmente a partir de <code>build/reports/pitest/mutations.xml</code> (execução com <code>./gradlew pitestAll</code>).
+    Nenhum arquivo de <code>src/main</code> ou <code>src/test</code> foi modificado para produzir este documento.
+</footer>
+
+</body>
+</html>
